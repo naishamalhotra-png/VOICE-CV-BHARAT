@@ -1,0 +1,6 @@
+{
+  "name": "VoiceCV",
+  "description": "AI-powered voice resume builder for Indian regional languages.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
