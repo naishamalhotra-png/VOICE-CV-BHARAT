@@ -106,7 +106,7 @@ export default function ResumeTemplate({ data, template, onUpdateData }: ResumeT
   const renderClassic = () => {
     const { personalInfo, skills, experience, education, languages } = editableData;
     return (
-      <div className="font-serif bg-white text-slate-900 p-8 md:p-12 min-h-[1100px] shadow-sm relative text-left">
+      <div className="font-serif bg-white text-slate-900 p-8 md:p-12 min-h-0 shadow-sm relative text-left">
         {editButton}
         
         {/* Header */}
@@ -381,7 +381,7 @@ export default function ResumeTemplate({ data, template, onUpdateData }: ResumeT
   const renderModern = () => {
     const { personalInfo, skills, experience, education, languages } = editableData;
     return (
-      <div className="font-sans bg-slate-50 text-slate-800 min-h-[1100px] shadow-sm relative overflow-hidden flex flex-col md:flex-row text-left">
+      <div className="font-sans bg-slate-50 text-slate-800 min-h-0 shadow-sm relative flex flex-col md:flex-row text-left">
         {editButton}
         
         {/* Left Slate Column */}
@@ -669,7 +669,7 @@ export default function ResumeTemplate({ data, template, onUpdateData }: ResumeT
   const renderSaffron = () => {
     const { personalInfo, skills, experience, education, languages } = editableData;
     return (
-      <div className="font-sans bg-amber-50 text-amber-950 p-8 md:p-12 min-h-[1100px] border-4 border-amber-200/60 shadow-sm relative text-left">
+      <div className="font-sans bg-amber-50 text-amber-950 p-8 md:p-12 min-h-0 border-4 border-amber-200/60 shadow-sm relative text-left">
         {editButton}
 
         {/* Traditional Heritage Framing */}

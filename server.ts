@@ -134,6 +134,10 @@ Extract and organize it into a polished, structured professional resume. If some
 
 Calculate an ATS score (integer from 0 to 100) representing how professional and complete the input voice description was, and provide a 1-sentence constructive enhancement feedback.
 
+All your conversational responses, feedback messages, ATS improvement tips, and spoken output must be in ${originalLanguage || "English"}. The resume JSON content fields (name, role, company, bullet points, summary, skills) must remain in English only.
+
+Add a new field in the JSON response called "agentMessage" which contains the agent's response to the user in their selected regional language (e.g. in Hindi: "आपका रेज़्यूमे तैयार है! आपका ATS स्कोर 65 है।").
+
 Transcript:
 """
 ${transcript}
@@ -200,9 +204,10 @@ Original Language of Speech: ${originalLanguage || "English"}
               description: "List of spoken/written languages"
             },
             atsScore: { type: Type.INTEGER, description: "An integer ATS format matching score out of 100." },
-            feedback: { type: Type.STRING, description: "1-sentence actionable feedback to boost their CV score." }
+            feedback: { type: Type.STRING, description: "1-sentence actionable feedback to boost their CV score." },
+            agentMessage: { type: Type.STRING, description: "The agent's response to the user in their selected regional language (e.g. in Hindi: 'आपका रेज़्यूमे तैयार है! आपका ATS स्कोर 65 है।')" }
           },
-          required: ["personalInfo", "skills", "experience", "education", "languages", "atsScore", "feedback"]
+          required: ["personalInfo", "skills", "experience", "education", "languages", "atsScore", "feedback", "agentMessage"]
         }
       }
     });

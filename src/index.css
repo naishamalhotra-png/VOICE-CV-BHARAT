@@ -70,3 +70,24 @@ body {
   background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.5), transparent);
 }
 
+/* Thin custom scrollbar in violet (#7c3aed) */
+.custom-violet-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #7c3aed rgba(255, 255, 255, 0.03);
+}
+
+.custom-violet-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-violet-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9999px;
+}
+
+.custom-violet-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #7c3aed;
+  border-radius: 9999px;
+}
+

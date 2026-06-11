@@ -7,8 +7,182 @@ import {
 } from "lucide-react";
 import { LANGUAGES, LanguageOption, ResumeData, TemplateType, SavedResume } from "./types";
 import ResumeTemplate from "./components/ResumeTemplate";
-import { jsPDF } from "jspdf";
+import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+
+const FEEDBACK_STRINGS: Record<string, {
+  recordingStarted: string;
+  recordingLive: string;
+  readyForCapture: string;
+  processingSTT: string;
+  processingTranslation: string;
+  processingGemini: string;
+  processingResume: string;
+  resumeReady: string;
+}> = {
+  "hi-IN": {
+    recordingStarted: "रिकॉर्डिंग शुरू हो गई है",
+    recordingLive: "रिकॉर्डिंग लाइव है",
+    readyForCapture: "ध्वनि रिकॉर्डिंग के लिए तैयार",
+    processingSTT: "सरवम एआई सारिका ट्रांसक्राइब कर रहा है...",
+    processingTranslation: "सरवम एआई अनुवाद कर रहा है...",
+    processingGemini: "जेमिनी आपके रेज़्यूमे को प्रारूपित कर रहा है...",
+    processingResume: "आपके रेज़्यूमे को प्रोसेस किया जा रहा है",
+    resumeReady: "आपका रेज़्यूमे तैयार है!"
+  },
+  "ta-IN": {
+    recordingStarted: "பதிவு செய்யத் தொடங்கப்பட்டது",
+    recordingLive: "நேரடி பதிவு செய்யப்படுகிறது",
+    readyForCapture: "ஒலிப் பதிவுக்குத் தயார்",
+    processingSTT: "ஸர்வம் ஏஐ தட்டச்சு செய்கிறது...",
+    processingTranslation: "ஸர்வம் ஏஐ மொழிபெயர்க்கிறது...",
+    processingGemini: "ஜெமினி உங்கள் சுயவிவரத்தை உருவாக்குகிறது...",
+    processingResume: "உங்கள் சுயவிவரம் செயலாக்கப்படுகிறது",
+    resumeReady: "உங்கள் சுயவிவரம் தயாராக உள்ளது!"
+  },
+  "te-IN": {
+    recordingStarted: "రికార్డింగ్ ప్రారంభమైంది",
+    recordingLive: "లైవ్ రికార్డింగ్ జరుగుతోంది",
+    readyForCapture: "వాయిస్ రికార్డింగ్ కోసం సిద్ధంగా ఉంది",
+    processingSTT: "సర్వం ఏఐ ట్రాన్స్‌క్రైబ్ చేస్తోంది...",
+    processingTranslation: "సర్వం ఏఐ అనువదిస్తోంది...",
+    processingGemini: "జెమిని మీ రెజ్యూమెను సిద్ధం చేస్తోంది...",
+    processingResume: "మీ రెజ్యూమెను సిద్ధం చేస్తున్నాము",
+    resumeReady: "మీ రెజ్యూమె సిద్ధంగా ఉంది!"
+  },
+  "kn-IN": {
+    recordingStarted: "ರೆಕಾರ್ಡಿಂಗ್ ಪ್ರಾರಂಭವಾಗಿದೆ",
+    recordingLive: "ಲೈವ್ ರೆಕಾರ್ಡಿಂಗ್ ನಡೆಯುತ್ತಿದೆ",
+    readyForCapture: "ರೆಕಾರ್ಡಿಂಗ್‌ಗೆ ಸಿದ್ಧವಾಗಿದೆ",
+    processingSTT: "ಸರ್ವಮ್ ಎಐ ಪ್ರತಿಲಿಪಿ ಮಾಡುತ್ತಿದೆ...",
+    processingTranslation: "ಸರ್ವಮ್ ಎಐ ಅನುವಾದಿಸುತ್ತಿದೆ...",
+    processingGemini: "ಜೆಮಿನಿ ನಿಮ್ಮ ರೆಸ್ಯೂಮೆಯನ್ನು ರೂಪಿಸುತ್ತಿದೆ...",
+    processingResume: "ನಿಮ್ಮ ರೆಸ್ಯೂಮೆಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲಾಗುತ್ತಿದೆ",
+    resumeReady: "ನಿಮ್ಮ ರೆಸ್ಯೂಮೆ ಸಿದ್ಧವಾಗಿದೆ!"
+  },
+  "ml-IN": {
+    recordingStarted: "റെക്കോർഡിംഗ് ആരംഭിച്ചു",
+    recordingLive: "തത്സമയ റെക്കോർഡിംഗ്",
+    readyForCapture: "റെക്കോർഡിംഗിനായി തയ്യാറാണ്",
+    processingSTT: "സർവ്വം എഐ ട്രാൻസ്ക്രൈബ് ചെയ്യുന്നു...",
+    processingTranslation: "സർവ്വം എഐ വിവർത്തനം ചെയ്യുന്നു...",
+    processingGemini: "ജെമിനി ബയോഡാറ്റ രൂപപ്പെടുത്തുന്നു...",
+    processingResume: "നിങ്ങളുടെ ബയോഡാറ്റ തയ്യാറാക്കുന്നു",
+    resumeReady: "നിങ്ങളുടെ ബയോഡാറ്റ തയ്യാറാണ്!"
+  },
+  "bn-IN": {
+    recordingStarted: "রেকর্ডিং শুরু হয়েছে",
+    recordingLive: "লাইভ রেকর্ডিং চলছে",
+    readyForCapture: "রেকর্ডিংয়ের জন্য প্রস্তুত",
+    processingSTT: "সর্বম এআই ট্রান্সক্রাইব করছে...",
+    processingTranslation: "সর্বম এআই অনুবাদ করছে...",
+    processingGemini: "জেমিনি আপনার জীবনবৃত্তান্ত প্রস্তুত করছে...",
+    processingResume: "আপনার জীবনবৃত্তান্ত প্রক্রিয়া করা হচ্ছে",
+    resumeReady: "আপনার জীবনবৃত্তান্ত প্রস্তুত!"
+  },
+  "mr-IN": {
+    recordingStarted: "रेकॉर्डिंग सुरू झाले आहे",
+    recordingLive: "थेट रेकॉर्डिंग सुरू आहे",
+    readyForCapture: "रेकॉर्डिंगसाठी तयार",
+    processingSTT: "सर्वम एआय ट्रान्सक्राईब करत आहे...",
+    processingTranslation: "सर्वम एआय भाषांतर करत आहे...",
+    processingGemini: "जेमिनी तुमचे रेझ्युमे बनवत आहे...",
+    processingResume: "तुमच्या रेझ्युमेवर प्रक्रिया केली जात आहे",
+    resumeReady: "तुमचा रेझ्युमे तयार आहे!"
+  },
+  "gu-IN": {
+    recordingStarted: "રેકોર્ડિંગ શરૂ થયું છે",
+    recordingLive: "લાઈવ રેકોર્ડિંગ શરૂ છે",
+    readyForCapture: "રેકોર્ડિંગ માટે તૈયાર",
+    processingSTT: "સરવમ એઆઈ લખાણ કરી રહ્યું છે...",
+    processingTranslation: "સરવમ એઆઈ અનુવાદ કરી રહ્યું છે...",
+    processingGemini: "જેમિની તમારું રેઝ્યૂમે તૈયાર કરી રહ્યું છે...",
+    processingResume: "તમારા રેઝ્યૂમે પર પ્રક્રિયા થઈ રહી છે",
+    resumeReady: "તમારું રેઝ્યૂમે તૈયાર છે!"
+  },
+  "pa-IN": {
+    recordingStarted: "ਰਿਕਾਰਡਿੰਗ ਸ਼ੁਰੂ ਹੋ ਗਈ ਹੈ",
+    recordingLive: "ਲਾਈਵ ਰਿਕਾਰਡਿੰਗ ਚੱਲ ਰਹੀ ਹੈ",
+    readyForCapture: "ਰਿਕਾਰਡਿੰਗ ਲਈ ਤਿਆਰ",
+    processingSTT: "ਸਰਵਮ ਏਆਈ ਟ੍ਰਾਂਸਕ੍ਰਾਈਬ ਕਰ ਰਹੀ ਹੈ...",
+    processingTranslation: "ਸਰਵਮ ਏਆਈ ਅਨੁਵਾਦ ਕਰ ਰਹੀ ਹੈ...",
+    processingGemini: "ਜੀਮਿਨੀ ਤੁਹਾਡੀ ਰੈਜ਼ਿਊਮੇ ਤਿਆਰ ਕਰ ਰਹੀ ਹੈ...",
+    processingResume: "ਤੁਹਾਡੀ ਰੈਜ਼ਿਊਮੇ 'ਤੇ ਪ੍ਰਕਿਰਿਆ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ",
+    resumeReady: "ਤੁਹਾਡੀ ਰੈਜ਼ਿਊਮੇ ਤਿਆਰ ਹੈ!"
+  },
+  "or-IN": {
+    recordingStarted: "ରେକର୍ଡିଂ ଆରମ୍ଭ ହୋଇଛି",
+    recordingLive: "ଲାଇଭ୍ ରେକର୍ଡିଂ ଚାଲିଛି",
+    readyForCapture: "ରେକର୍ଡିଂ ପାଇଁ ପ୍ରସ୍ତୁତ",
+    processingSTT: "ସର୍ବମ୍ ଏଆଇ ଟ୍ରାନ୍ସକ୍ରାଇବ୍ କରୁଛି...",
+    processingTranslation: "ସର୍ବମ୍ ଏଆଇ ଅਨୁବାଦ କରୁଛି...",
+    processingGemini: "ଜେମିନି ଆପଣଙ୍କର ରେଜୁମେ ପ୍ରସ୍ତୁତ କରୁଛି...",
+    processingResume: "ଆପଣଙ୍କର ରେଜୁମେ ପ୍ରକ୍ରିୟାକରଣ ଚାଲିଛି",
+    resumeReady: "ଆପଣଙ୍କର ରେଜୁମେ ପ୍ରସ୍ତୁତ ଅଛି!"
+  },
+  "en-IN": {
+    recordingStarted: "Recording started",
+    recordingLive: "Recording Live",
+    readyForCapture: "Ready for Acoustic capture",
+    processingSTT: "Sarvam AI Saarika v2.5 STT transcribing...",
+    processingTranslation: "Sarvam AI translating raw speech to English...",
+    processingGemini: "Gemini formatting unstructured transcript...",
+    processingResume: "Processing your resume",
+    resumeReady: "Your resume is ready"
+  }
+};
+
+const speakAgentMessage = (text: string, languageCode: string) => {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  
+  const cleanLang = languageCode === "or-IN" ? "od-IN" : languageCode;
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = cleanLang;
+  utterance.rate = 0.9;
+  utterance.pitch = 1.1;
+  utterance.volume = 1;
+
+  let spoken = false;
+
+  const setVoice = () => {
+    if (spoken) return;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return;
+
+    spoken = true;
+    
+    const normalizeLang = (l: string) => l.toLowerCase().replace("_", "-");
+    const targetNormalized = normalizeLang(cleanLang);
+    const langPrefix = targetNormalized.split("-")[0];
+    
+    const preferred = voices.find(v =>
+      normalizeLang(v.lang) === targetNormalized && v.localService === true
+    ) || voices.find(v =>
+      normalizeLang(v.lang) === targetNormalized
+    ) || voices.find(v =>
+      normalizeLang(v.lang).startsWith(langPrefix)
+    );
+
+    if (preferred) {
+      utterance.voice = preferred;
+      utterance.lang = preferred.lang;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length > 0) {
+    setVoice();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      setVoice();
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }
+};
 
 export default function App() {
   const [currentView, setCurrentView] = useState<"HOME" | "AUTH" | "APP">("HOME");
@@ -197,6 +371,9 @@ export default function App() {
       setIsRecording(true);
       // Start visualization
       drawAudioWave();
+      
+      const strings = FEEDBACK_STRINGS[selectedLang.code] || FEEDBACK_STRINGS["en-IN"];
+      speakAgentMessage(strings.recordingStarted, selectedLang.code);
     } catch (err: any) {
       console.error("Recording start error:", err);
       setProcessingError("Microphone permission was denied or is unavailable in your iframe window context. You can click 'Load Preset Voice Transcript' to demo AI capabilities instantly!");
@@ -270,6 +447,9 @@ export default function App() {
     try {
       setProcessingStep("STT");
       setProcessingError("");
+      
+      const strings = FEEDBACK_STRINGS[selectedLang.code] || FEEDBACK_STRINGS["en-IN"];
+      speakAgentMessage(strings.processingResume, selectedLang.code);
       
       const base64Audio = await blobToBase64(targetBlob);
       
@@ -356,6 +536,13 @@ export default function App() {
       setGeneratedResume(resumeJson);
       setProcessingStep("COMPLETE");
 
+      if (resumeJson.agentMessage) {
+        speakAgentMessage(resumeJson.agentMessage, selectedLang.code);
+      } else {
+        const strings = FEEDBACK_STRINGS[selectedLang.code] || FEEDBACK_STRINGS["en-IN"];
+        speakAgentMessage(strings.resumeReady, selectedLang.code);
+      }
+
       // Save to historic resume logs in local storage
       const newResumeRecord: SavedResume = {
         id: "res_" + Date.now(),
@@ -383,7 +570,15 @@ export default function App() {
     
     // Find back language object
     const matchedLang = LANGUAGES.find(l => l.name === hist.language);
-    if (matchedLang) setSelectedLang(matchedLang);
+    if (matchedLang) {
+      setSelectedLang(matchedLang);
+      if (hist.data.agentMessage) {
+        speakAgentMessage(hist.data.agentMessage, matchedLang.code);
+      } else {
+        const strings = FEEDBACK_STRINGS[matchedLang.code] || FEEDBACK_STRINGS["en-IN"];
+        speakAgentMessage(strings.resumeReady, matchedLang.code);
+      }
+    }
   };
 
   // Delete saved historic item
@@ -393,229 +588,108 @@ export default function App() {
     saveToLocalResumes(filtered);
   };
 
-  // jsPDF Multi-Page Capture & Export
-  const exportPDF = async () => {
-    if (!generatedResume) return;
+  // Download PDF Document Action (FIX 3)
+  const downloadPDF = async () => {
+    const element = document.getElementById('resume-preview-container');
+    if (!element) return;
+    
     setIsGeneratingPDF(true);
-
-    const docElement = document.getElementById("resume-content");
-    if (!docElement) {
-      setIsGeneratingPDF(false);
-      return;
-    }
-
-    const replaceModernColors = (cssText: string): string => {
-      const targets = ["oklch(", "lch(", "lab(", "color("];
-      let text = cssText;
-      
-      for (const target of targets) {
-        let result = "";
-        let currentIndex = 0;
-        
-        while (true) {
-          const index = text.indexOf(target, currentIndex);
-          if (index === -1) {
-            result += text.substring(currentIndex);
-            break;
-          }
-          
-          result += text.substring(currentIndex, index);
-          
-          let parenCount = 1;
-          let scanIndex = index + target.length;
-          
-          while (scanIndex < text.length && parenCount > 0) {
-            const char = text[scanIndex];
-            if (char === "(") {
-              parenCount++;
-            } else if (char === ")") {
-              parenCount--;
-            }
-            scanIndex++;
-          }
-          
-          result += "rgb(120, 120, 120)";
-          currentIndex = scanIndex;
-        }
-        text = result;
-      }
-      return text;
-    };
-
-    // Backup and sanitize modern CSS (like oklch colors) that crash html2canvas's CSS parser
-    const styleElements = Array.from(document.querySelectorAll("style"));
-    const linkElements = Array.from(document.querySelectorAll("link[rel='stylesheet']")) as HTMLLinkElement[];
-
-    const originalStylesText = styleElements.map(el => ({
-      element: el,
-      originalText: el.textContent
-    }));
-
-    // Back up and sanitize inline styles on elements inside the targeted resume container
-    const elementsWithStyles = docElement.querySelectorAll("[style]");
-    const originalInlineStyles = Array.from(elementsWithStyles).map(el => ({
-      element: el as HTMLElement,
-      originalStyle: (el as HTMLElement).getAttribute("style")
-    }));
-
-    // Back up and sanitize fills
-    const elementsWithFill = docElement.querySelectorAll("[fill]");
-    const originalFillStyles = Array.from(elementsWithFill).map(el => ({
-      element: el as Element,
-      originalValue: el.getAttribute("fill")
-    }));
-
-    // Back up and sanitize strokes
-    const elementsWithStroke = docElement.querySelectorAll("[stroke]");
-    const originalStrokeStyles = Array.from(elementsWithStroke).map(el => ({
-      element: el as Element,
-      originalValue: el.getAttribute("stroke")
-    }));
-
-    const tempStyleBlocks: HTMLStyleElement[] = [];
-    const disabledLinkElements: HTMLLinkElement[] = [];
-
     try {
-      // Find and hide action buttons or edit modes
-      const nonPdfElements = document.querySelectorAll(".no-pdf");
-      nonPdfElements.forEach(item => item.classList.add("hidden"));
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          const clonedRoot = clonedDoc.getElementById('resume-preview-container');
+          const originalRoot = document.getElementById('resume-preview-container');
+          if (!clonedRoot || !originalRoot) return;
 
-      // 1. Sanitize local style tags
-      styleElements.forEach(styleEl => {
-        if (styleEl.textContent && (styleEl.textContent.includes("oklch") || styleEl.textContent.includes("lch") || styleEl.textContent.includes("lab"))) {
-          styleEl.textContent = replaceModernColors(styleEl.textContent);
-        }
-      });
+          const clonedElements = clonedRoot.getElementsByTagName('*');
+          const originalElements = originalRoot.getElementsByTagName('*');
 
-      // 2. Fetch, sanitize and replace external link stylesheets (e.g. from Vite build in Production)
-      for (const linkEl of linkElements) {
-        try {
-          if (linkEl.href) {
-            const response = await fetch(linkEl.href);
-            if (response.ok) {
-              let cssText = await response.text();
-              if (cssText.includes("oklch") || cssText.includes("lch") || cssText.includes("lab")) {
-                cssText = replaceModernColors(cssText);
-                const tempStyle = document.createElement("style");
-                tempStyle.setAttribute("data-temp-pdf-style", "true");
-                tempStyle.textContent = cssText;
-                document.head.appendChild(tempStyle);
-                tempStyleBlocks.push(tempStyle);
+          const colorProps = [
+            'color', 
+            'backgroundColor', 
+            'borderColor', 
+            'borderTopColor', 
+            'borderRightColor', 
+            'borderBottomColor', 
+            'borderLeftColor',
+            'fill',
+            'stroke'
+          ];
 
-                linkEl.disabled = true;
-                disabledLinkElements.push(linkEl);
+          const fixStyling = (orig: HTMLElement, clone: HTMLElement) => {
+            const computed = window.getComputedStyle(orig);
+            for (const prop of colorProps) {
+              const val = computed[prop as keyof CSSStyleDeclaration];
+              if (typeof val === 'string' && val) {
+                if (val.includes('oklch') || val.includes('oklab')) {
+                  if (prop === 'color') {
+                    clone.style.color = '#1f2937';
+                  } else if (prop === 'backgroundColor') {
+                    clone.style.backgroundColor = '#ffffff';
+                  } else if (prop.startsWith('border')) {
+                    clone.style[prop as any] = '#e5e7eb';
+                  }
+                } else {
+                  clone.style[prop as any] = val;
+                }
               }
             }
+          };
+
+          fixStyling(originalRoot as HTMLElement, clonedRoot as HTMLElement);
+
+          for (let i = 0; i < originalElements.length; i++) {
+            const orig = originalElements[i] as HTMLElement;
+            const clone = clonedElements[i] as HTMLElement;
+            if (orig && clone) {
+              fixStyling(orig, clone);
+            }
           }
-        } catch (e) {
-          console.warn("Failed to preprocess link stylesheet:", linkEl.href, e);
-        }
-      }
-
-      // 3. Sanitize inline style attributes on elements within docElement
-      elementsWithStyles.forEach(el => {
-        const hEl = el as HTMLElement;
-        const styleAttr = hEl.getAttribute("style");
-        if (styleAttr && (styleAttr.includes("oklch") || styleAttr.includes("lch") || styleAttr.includes("lab"))) {
-          hEl.setAttribute("style", replaceModernColors(styleAttr));
         }
       });
-
-      // 4. Sanitize SVG fill attributes on elements within docElement
-      elementsWithFill.forEach(el => {
-        const val = el.getAttribute("fill");
-        if (val && (val.includes("oklch") || val.includes("lch") || val.includes("lab"))) {
-          el.setAttribute("fill", replaceModernColors(val));
-        }
-      });
-
-      // 5. Sanitize SVG stroke attributes on elements within docElement
-      elementsWithStroke.forEach(el => {
-        const val = el.getAttribute("stroke");
-        if (val && (val.includes("oklch") || val.includes("lch") || val.includes("lab"))) {
-          el.setAttribute("stroke", replaceModernColors(val));
-        }
-      });
-
-      // Canvas build options
-      const canvas = await html2canvas(docElement, {
-        scale: 2.5, // Crisp 2.5x resolution for print clarity
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false
-      });
-
-      // Restore action buttons visual immediately
-      nonPdfElements.forEach(item => item.classList.remove("hidden"));
-
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-      const pdf = new jsPDF("p", "mm", "a4");
       
-      const width = 210; // A4 standard width in mm
-      const pageHeight = 297; // A4 standard height in mm
-      const imgHeight = (canvas.height * width) / canvas.width;
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
       
-      let heightRemaining = imgHeight;
-      let yOffset = 0;
-
-      pdf.addImage(imgData, "JPEG", 0, yOffset, width, imgHeight, undefined, "FAST");
-      heightRemaining -= pageHeight;
-
-      // Append pages for extremely rich resumes
-      while (heightRemaining > 0) {
-        yOffset = heightRemaining - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, yOffset, width, imgHeight, undefined, "FAST");
-        heightRemaining -= pageHeight;
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 0;
+      
+      const totalPages = Math.ceil((imgHeight * ratio) / pdfHeight);
+      
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+        pdf.addImage(
+          imgData,
+          'PNG',
+          imgX,
+          imgY - page * pdfHeight,
+          imgWidth * ratio,
+          imgHeight * ratio
+        );
       }
-
-      const safeFileName = `${generatedResume.personalInfo.name.replace(/\s+/g, "_")}_Voice_Resume.pdf`;
-      pdf.save(safeFileName);
-    } catch (err) {
-      console.error("PDF download failed:", err);
+      
+      const resumeData = { name: generatedResume?.personalInfo?.name };
+      const candidateName = resumeData?.name || 'Resume';
+      pdf.save(candidateName + '_VoiceCV.pdf');
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert('PDF download failed. Please try again.');
     } finally {
-      // Restore original <style> text contents
-      originalStylesText.forEach(item => {
-        item.element.textContent = item.originalText;
-      });
-
-      // Restore inline styles
-      originalInlineStyles.forEach(item => {
-        if (item.originalStyle !== null) {
-          item.element.setAttribute("style", item.originalStyle);
-        } else {
-          item.element.removeAttribute("style");
-        }
-      });
-
-      // Restore fills
-      originalFillStyles.forEach(item => {
-        if (item.originalValue !== null) {
-          item.element.setAttribute("fill", item.originalValue);
-        } else {
-          item.element.removeAttribute("fill");
-        }
-      });
-
-      // Restore strokes
-      originalStrokeStyles.forEach(item => {
-        if (item.originalValue !== null) {
-          item.element.setAttribute("stroke", item.originalValue);
-        } else {
-          item.element.removeAttribute("stroke");
-        }
-      });
-
-      // Enable disabled link stylesheets
-      disabledLinkElements.forEach(el => {
-        el.disabled = false;
-      });
-
-      // Remove temporary styles
-      tempStyleBlocks.forEach(el => {
-        el.remove();
-      });
-
       setIsGeneratingPDF(false);
     }
   };
@@ -1030,12 +1104,16 @@ export default function App() {
                         <span className="text-2xl font-bold font-mono text-red-500 tracking-wider">
                           {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, "0")}
                         </span>
-                        <p className="text-[10px] text-red-400 tracking-widest uppercase font-bold mt-1">Recording Live</p>
+                        <p className="text-[10px] text-red-400 tracking-widest uppercase font-bold mt-1 font-sans">
+                          {FEEDBACK_STRINGS[selectedLang.code]?.recordingLive || "Recording Live"}
+                        </p>
                       </div>
                     ) : (
                       <div>
-                        <span className="text-sm font-semibold text-zinc-300">Ready for Acoustic capture</span>
-                        <p className="text-[11px] text-zinc-500 mt-1">Limits: Up to 30 seconds of regional speech</p>
+                        <span className="text-sm font-semibold text-zinc-300">
+                          {FEEDBACK_STRINGS[selectedLang.code]?.readyForCapture || "Ready for Acoustic capture"}
+                        </span>
+                        <p className="text-[11px] text-zinc-500 mt-1 font-sans">Limits: Up to 30 seconds of regional speech</p>
                       </div>
                     )}
                   </div>
@@ -1155,7 +1233,7 @@ export default function App() {
             </div>
 
             {/* COLUMN 2: LIVE RESUME CANVAS FRAME */}
-            <div className="lg:col-span-5 space-y-6 flex-1">
+            <div className="lg:col-span-5 space-y-6 min-w-0 w-full">
               
               {/* Pipeline processing spinner overlays */}
               {processingStep && processingStep !== "COMPLETE" && (
@@ -1166,10 +1244,10 @@ export default function App() {
                   </div>
 
                   <div>
-                    <h4 className="text-xl font-bold bg-gradient-to-r from-violet-300 to-amber-300 bg-clip-text text-transparent">
-                      {processingStep === "STT" && "Sarvam AI Saarika v2.5 STT transcribing..."}
-                      {processingStep === "TRANSLATING" && "Sarvam AI translating raw speech to English..."}
-                      {processingStep === "GEMINI" && "Gemini formatting unstructured transcript..."}
+                    <h4 className="text-xl font-bold bg-gradient-to-r from-violet-300 to-amber-300 bg-clip-text text-transparent leading-relaxed animate-pulse">
+                      {processingStep === "STT" && (FEEDBACK_STRINGS[selectedLang.code]?.processingSTT || "Sarvam AI Saarika v2.5 STT transcribing...")}
+                      {processingStep === "TRANSLATING" && (FEEDBACK_STRINGS[selectedLang.code]?.processingTranslation || "Sarvam AI translating raw speech to English...")}
+                      {processingStep === "GEMINI" && (FEEDBACK_STRINGS[selectedLang.code]?.processingGemini || "Gemini formatting unstructured transcript...")}
                     </h4>
                     <p className="text-xs text-zinc-400 max-w-sm mt-3 mx-auto leading-relaxed">
                       Please hold on! Indian vocal soundwaves are parsed via secure high-performance deeplearning servers to extract structured qualifications.
@@ -1202,9 +1280,13 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Print Target DOM Paper frame */}
-                  <div className="overflow-x-auto rounded-b-2xl shadow-2xl border border-white/5 bg-slate-900/10 p-1 md:p-3 relative">
-                    <div id="resume-content" className="w-[100%] min-w-[700px] mx-auto scale-100 origin-top">
+                  {/* Print Target DOM Paper frame (FIX 2) */}
+                  <div 
+                    id="resume-preview-container"
+                    className="overflow-x-auto overflow-y-auto rounded-b-2xl shadow-2xl border border-white/5 bg-slate-900/10 p-1 md:p-3 relative custom-violet-scrollbar"
+                    style={{ maxHeight: "calc(100vh - 200px)" }}
+                  >
+                    <div className="w-[100%] min-w-[700px] mx-auto scale-100 origin-top">
                       <ResumeTemplate
                         data={generatedResume}
                         template={activeTemplate}
@@ -1235,7 +1317,7 @@ export default function App() {
             </div>
 
             {/* COLUMN 3: PERFORMANCE METRICS & STYLE CONFIGS */}
-            <div className="lg:col-span-3 space-y-6 flex flex-col shrink-0">
+            <div className="lg:col-span-3 space-y-6 flex flex-col shrink-0 min-w-0 w-full">
               
               {/* ATS Rating score indicator */}
               {generatedResume ? (
@@ -1251,6 +1333,18 @@ export default function App() {
                   </div>
                   <p className="text-[11px] text-center text-zinc-450 leading-relaxed">
                     Once voice is transcribed, regional soundwave parsing will calculate the optimal job role mapping score.
+                  </p>
+                </div>
+              )}
+
+              {generatedResume && generatedResume.agentMessage && (
+                <div className="glass p-5 text-left border border-violet-500/20 bg-violet-950/10 rounded-2xl relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-2 text-violet-400 font-bold uppercase tracking-wider text-[10px]">
+                    <Volume2 size={14} className="shrink-0" />
+                    <span>AI Voice Message</span>
+                  </div>
+                  <p className="text-xs text-zinc-200 leading-relaxed font-sans">
+                    {generatedResume.agentMessage}
                   </p>
                 </div>
               )}
@@ -1280,7 +1374,7 @@ export default function App() {
 
               {/* Trigger Download PDF Actions */}
               <button
-                onClick={exportPDF}
+                onClick={downloadPDF}
                 disabled={!generatedResume || isGeneratingPDF}
                 className="w-full py-4 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl glow-teal flex items-center justify-center gap-2 transition-all cursor-pointer select-none"
               >

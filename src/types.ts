@@ -27,6 +27,7 @@ export interface ResumeData {
   languages: string[];
   atsScore: number;
   feedback: string;
+  agentMessage?: string;
 }
 
 export type TemplateType = "Classic" | "Modern" | "Saffron";
