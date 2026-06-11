@@ -602,6 +602,8 @@ export default function App() {
         backgroundColor: '#ffffff',
         width: element.scrollWidth,
         height: element.scrollHeight,
+        windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
         onclone: (clonedDoc) => {
           const clonedRoot = clonedDoc.getElementById('resume-preview-container');
           const originalRoot = document.getElementById('resume-preview-container');
@@ -667,21 +669,21 @@ export default function App() {
       const imgHeight = canvas.height;
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
+      
       
       const totalPages = Math.ceil((imgHeight * ratio) / pdfHeight);
       
       for (let page = 0; page < totalPages; page++) {
-        if (page > 0) pdf.addPage();
-        pdf.addImage(
-          imgData,
-          'PNG',
-          imgX,
-          imgY - page * pdfHeight,
-          imgWidth * ratio,
-          imgHeight * ratio
-        );
-      }
+  if (page > 0) pdf.addPage();
+  pdf.addImage(
+    imgData,
+    'PNG',
+    imgX,
+    -(page * pdfHeight),   // ← negative offset scrolls the image up each page
+    imgWidth * ratio,
+    imgHeight * ratio
+  );
+}
       
       const resumeData = { name: generatedResume?.personalInfo?.name };
       const candidateName = resumeData?.name || 'Resume';
@@ -1281,11 +1283,11 @@ export default function App() {
                   </div>
 
                   {/* Print Target DOM Paper frame (FIX 2) */}
-                  <div 
-                    id="resume-preview-container"
-                    className="overflow-x-auto overflow-y-auto rounded-b-2xl shadow-2xl border border-white/5 bg-slate-900/10 p-1 md:p-3 relative custom-violet-scrollbar"
-                    style={{ maxHeight: "calc(100vh - 200px)" }}
-                  >
+                <div 
+  id="resume-preview-container"
+  className="overflow-x-auto overflow-y-auto rounded-b-2xl shadow-2xl border border-white/5 bg-slate-900/10 p-1 md:p-3 relative custom-violet-scrollbar"
+  style={{ maxHeight: "calc(100vh - 200px)" }}
+>
                     <div className="w-[100%] min-w-[700px] mx-auto scale-100 origin-top">
                       <ResumeTemplate
                         data={generatedResume}
